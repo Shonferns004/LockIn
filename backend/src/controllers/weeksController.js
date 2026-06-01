@@ -19,7 +19,15 @@ export async function getWeeks(req, res) {
 
         const { data: tips } = await supabase.from('lookmax_tips').select('content').eq('day_plan_id', day.id).order('sort_order');
         day.lookmax = (tips || []).map(r => r.content);
+
+        // map to Flutter's expected key names
+        day.day = day.day_number;
+        delete day.day_number;
       }
+
+      // map to Flutter's expected key names
+      week.week = week.week_number;
+      delete week.week_number;
     }
 
     res.json(weeks);
@@ -34,7 +42,9 @@ export async function saveWeeks(req, res) {
     const weeks = req.body.weeks || (Array.isArray(req.body) ? req.body : [req.body]);
 
     for (const week of weeks) {
-      const { data: existing } = await supabase.from('week_plans').select('id').eq('profile_id', req.userId).eq('week_number', week.week_number).maybeSingle();
+      const weekNum = week.week ?? week.week_number;
+
+      const { data: existing } = await supabase.from('week_plans').select('id').eq('profile_id', req.userId).eq('week_number', weekNum).maybeSingle();
 
       if (existing) {
         const { data: oldDays } = await supabase.from('day_plans').select('id').eq('week_plan_id', existing.id);
@@ -48,11 +58,12 @@ export async function saveWeeks(req, res) {
       }
 
       const wpId = generateId();
-      await supabase.from('week_plans').insert({ id: wpId, profile_id: req.userId, week_number: week.week_number, plan_start_date: week.plan_start_date || '' });
+      await supabase.from('week_plans').insert({ id: wpId, profile_id: req.userId, week_number: weekNum, plan_start_date: week.plan_start_date || '' });
 
       for (const day of (week.days || [])) {
         const dpId = generateId();
-        await supabase.from('day_plans').insert({ id: dpId, week_plan_id: wpId, day_number: day.day_number ?? day.day, title: day.title, focus: day.focus || '', icon: day.icon || '💪', scheduled_date: day.scheduled_date || '', is_rest: day.is_rest ? 1 : 0 });
+        const dayNum = day.day ?? day.day_number;
+        await supabase.from('day_plans').insert({ id: dpId, week_plan_id: wpId, day_number: dayNum, title: day.title, focus: day.focus || '', icon: day.icon || '💪', scheduled_date: day.scheduled_date || '', is_rest: day.is_rest ? 1 : 0 });
 
         for (let ei = 0; ei < (day.exercises || []).length; ei++) {
           const ex = day.exercises[ei];
