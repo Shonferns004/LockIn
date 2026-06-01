@@ -14,7 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  static const Duration _minVisible = Duration(milliseconds: 700);
+  static const Duration _minVisible = Duration(milliseconds: 200);
   late final AnimationController _pulseController;
   late final Animation<double> _scale;
   late final Animation<double> _opacity;
