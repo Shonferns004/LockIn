@@ -105,7 +105,7 @@ class ApiService {
 
   Future<Map<String, dynamic>> signup(
       String email, String password) async {
-    final res = await post('/auth/signup', {
+    final res = await post('/api/auth/signup', {
       'email': email,
       'password': password,
     });
@@ -116,7 +116,7 @@ class ApiService {
   }
 
   Future<Map<String, dynamic>> login(String email, String password) async {
-    final res = await post('/auth/login', {
+    final res = await post('/api/auth/login', {
       'email': email,
       'password': password,
     });
@@ -128,7 +128,7 @@ class ApiService {
 
   Future<void> verify() async {
     if (_token == null) throw ApiException(401, 'No token');
-    await get('/auth/verify');
+    await get('/api/auth/verify');
   }
 
   Future<void> logout() async {

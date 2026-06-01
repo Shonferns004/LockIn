@@ -33,7 +33,7 @@ class DatabaseService {
   Future<Profile?> loadProfile() async {
     if (!hasUser) return null;
     try {
-      final res = await _api.get('/profile');
+      final res = await _api.get('/api/profile');
       return Profile.fromJson(res);
     } catch (e, st) {
       _reportError('loadProfile', e, st);
@@ -44,7 +44,7 @@ class DatabaseService {
   Future<void> saveProfile(Profile p) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile', p.toJson());
+      await _api.put('/api/profile', p.toJson());
     } catch (e, st) {
       _reportError('saveProfile', e, st);
     }
@@ -53,7 +53,7 @@ class DatabaseService {
   Future<void> saveOnboardingProfile(Profile p) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/onboarding', p.toJson());
+      await _api.put('/api/profile/onboarding', p.toJson());
     } catch (e, st) {
       _reportError('saveOnboardingProfile', e, st);
     }
@@ -62,7 +62,7 @@ class DatabaseService {
   Future<void> saveUsername(String username) async {
     if (!hasUser) return;
     try {
-      await _api.patch('/profile/username', {'username': username});
+      await _api.patch('/api/profile/username', {'username': username});
     } catch (e, st) {
       _reportError('saveUsername', e, st);
     }
@@ -71,7 +71,7 @@ class DatabaseService {
   Future<void> saveEmail(String email) async {
     if (!hasUser) return;
     try {
-      await _api.patch('/profile/email', {'email': email});
+      await _api.patch('/api/profile/email', {'email': email});
     } catch (e, st) {
       _reportError('saveEmail', e, st);
     }
@@ -80,7 +80,7 @@ class DatabaseService {
   Future<bool> get dailyReminders async {
     if (!hasUser) return false;
     try {
-      final res = await _api.get('/profile/reminders');
+      final res = await _api.get('/api/profile/reminders');
       return res['daily_reminders'] as bool? ?? false;
     } catch (e, st) {
       _reportError('dailyReminders', e, st);
@@ -91,7 +91,7 @@ class DatabaseService {
   Future<void> saveDailyReminders(bool val) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/reminders', {'daily_reminders': val});
+      await _api.put('/api/profile/reminders', {'daily_reminders': val});
     } catch (e, st) {
       _reportError('saveDailyReminders', e, st);
     }
@@ -100,7 +100,7 @@ class DatabaseService {
   Future<String> get difficultyLevel async {
     if (!hasUser) return 'Beast';
     try {
-      final res = await _api.get('/profile/difficulty');
+      final res = await _api.get('/api/profile/difficulty');
       return res['difficulty_level'] as String? ?? 'Beast';
     } catch (e, st) {
       _reportError('difficultyLevel', e, st);
@@ -111,7 +111,7 @@ class DatabaseService {
   Future<void> saveDifficultyLevel(String val) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/difficulty', {'difficulty_level': val});
+      await _api.put('/api/profile/difficulty', {'difficulty_level': val});
     } catch (e, st) {
       _reportError('saveDifficultyLevel', e, st);
     }
@@ -124,7 +124,7 @@ class DatabaseService {
   Future<String?> loadPlanAnchorDate() async {
     if (!hasUser) return null;
     try {
-      final weeks = await _api.getList('/weeks');
+      final weeks = await _api.getList('/api/weeks');
       if (weeks.isEmpty) return null;
       final startDate = weeks[0]['plan_start_date']?.toString() ?? '';
       if (startDate.isEmpty) return null;
@@ -138,7 +138,7 @@ class DatabaseService {
   Future<void> saveStepGoal(int goal) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/step-goal', {'step_goal': goal});
+      await _api.put('/api/profile/step-goal', {'step_goal': goal});
     } catch (e, st) {
       _reportError('saveStepGoal', e, st);
     }
@@ -147,7 +147,7 @@ class DatabaseService {
   Future<void> saveStepEnabled(bool enabled) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/step-enabled', {'step_enabled': enabled});
+      await _api.put('/api/profile/step-enabled', {'step_enabled': enabled});
     } catch (e, st) {
       _reportError('saveStepEnabled', e, st);
     }
@@ -156,7 +156,7 @@ class DatabaseService {
   Future<void> saveStrideLength(int cm) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/stride-length', {'stride_length': cm});
+      await _api.put('/api/profile/stride-length', {'stride_length': cm});
     } catch (e, st) {
       _reportError('saveStrideLength', e, st);
     }
@@ -165,7 +165,7 @@ class DatabaseService {
   Future<void> saveDailySteps(int steps) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/daily-steps', {
+      await _api.put('/api/profile/daily-steps', {
         'daily_steps': steps,
         'last_step_date': _dateKey(DateTime.now()),
       });
@@ -177,7 +177,7 @@ class DatabaseService {
   Future<void> saveWaterGoal(int ml) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/water-goal', {'water_goal': ml});
+      await _api.put('/api/profile/water-goal', {'water_goal': ml});
     } catch (e, st) {
       _reportError('saveWaterGoal', e, st);
     }
@@ -186,7 +186,7 @@ class DatabaseService {
   Future<void> saveDailyWater(int ml) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/daily-water', {
+      await _api.put('/api/profile/daily-water', {
         'daily_water': ml,
         'last_water_date': _dateKey(DateTime.now()),
       });
@@ -198,7 +198,7 @@ class DatabaseService {
   Future<void> saveWaterReminderEnabled(bool enabled) async {
     if (!hasUser) return;
     try {
-      await _api.put('/profile/water-reminder', {'water_reminder': enabled});
+      await _api.put('/api/profile/water-reminder', {'water_reminder': enabled});
     } catch (e, st) {
       _reportError('saveWaterReminderEnabled', e, st);
     }
@@ -209,7 +209,7 @@ class DatabaseService {
   Future<List<WeekPlan>> loadWeeks() async {
     if (!hasUser) return [];
     try {
-      final list = await _api.getList('/weeks');
+      final list = await _api.getList('/api/weeks');
       return list.map((j) => WeekPlan.fromJson(j as Map<String, dynamic>)).toList();
     } catch (e, st) {
       _reportError('loadWeeks', e, st);
@@ -220,7 +220,7 @@ class DatabaseService {
   Future<void> saveWeeks(List<WeekPlan> weeks) async {
     if (!hasUser) return;
     try {
-      await _api.post('/weeks', {'weeks': weeks.map((w) => w.toJson()).toList()});
+      await _api.post('/api/weeks', {'weeks': weeks.map((w) => w.toJson()).toList()});
     } catch (e, st) {
       _reportError('saveWeeks', e, st);
     }
@@ -231,7 +231,7 @@ class DatabaseService {
   Future<Progress> loadProgress() async {
     if (!hasUser) return Progress();
     try {
-      final res = await _api.get('/progress');
+      final res = await _api.get('/api/progress');
       return Progress.fromJson({
         'days': res['total_days'] as int? ?? 0,
         'workouts': res['workouts'] as int? ?? 0,
@@ -250,7 +250,7 @@ class DatabaseService {
   Future<void> saveProgress(Progress p) async {
     if (!hasUser) return;
     try {
-      await _api.put('/progress', {
+      await _api.put('/api/progress', {
         'total_days': p.days,
         'workouts': p.workouts,
         'streak': p.streak,
@@ -269,7 +269,7 @@ class DatabaseService {
   Future<List<int>> loadCompletedDays() async {
     if (!hasUser) return [];
     try {
-      final rows = await _api.getList('/completed-days');
+      final rows = await _api.getList('/api/completed-days');
       return rows.map((r) => (r as Map)['day_index'] as int).toList();
     } catch (e, st) {
       _reportError('loadCompletedDays', e, st);
@@ -280,7 +280,7 @@ class DatabaseService {
   Future<List<String>> loadCompletedDates() async {
     if (!hasUser) return [];
     try {
-      final rows = await _api.getList('/completed-days');
+      final rows = await _api.getList('/api/completed-days');
       return rows
           .map((r) => (r as Map)['completed_at']?.toString() ?? '')
           .where((v) => v.isNotEmpty && v.length >= 10)
@@ -298,7 +298,7 @@ class DatabaseService {
   Future<List<String>> loadSkippedDates() async {
     if (!hasUser) return [];
     try {
-      final rows = await _api.getList('/skipped-dates');
+      final rows = await _api.getList('/api/skipped-dates');
       return rows
           .map((r) => (r as Map)['skipped_date']?.toString() ?? '')
           .where((v) => v.isNotEmpty)
@@ -312,7 +312,7 @@ class DatabaseService {
   Future<void> markCompletedDay(int dayIdx) async {
     if (!hasUser) return;
     try {
-      await _api.post('/completed-days', {'day_index': dayIdx});
+      await _api.post('/api/completed-days', {'day_index': dayIdx});
     } catch (e, st) {
       _reportError('markCompletedDay', e, st);
     }
@@ -321,7 +321,7 @@ class DatabaseService {
   Future<void> markSkippedDate(String skippedDate) async {
     if (!hasUser) return;
     try {
-      await _api.post('/skipped-dates', {'skipped_date': skippedDate});
+      await _api.post('/api/skipped-dates', {'skipped_date': skippedDate});
     } catch (e, st) {
       _reportError('markSkippedDate', e, st);
     }
@@ -330,7 +330,7 @@ class DatabaseService {
   Future<void> saveCompletedDays(List<int> days) async {
     if (!hasUser) return;
     try {
-      await _api.put('/completed-days', {'days': days});
+      await _api.put('/api/completed-days', {'days': days});
     } catch (e, st) {
       _reportError('saveCompletedDays', e, st);
     }
@@ -341,7 +341,7 @@ class DatabaseService {
   Future<List<Map<String, String>>> loadCoachMessages() async {
     if (!hasUser) return [];
     try {
-      final rows = await _api.getList('/coach');
+      final rows = await _api.getList('/api/coach');
       return rows
           .map((r) => {
                 'role': (r as Map)['role'] as String,
@@ -357,7 +357,7 @@ class DatabaseService {
   Future<void> saveCoachMessage(String role, String content) async {
     if (!hasUser) return;
     try {
-      await _api.post('/coach', {'role': role, 'content': content});
+      await _api.post('/api/coach', {'role': role, 'content': content});
     } catch (e, st) {
       _reportError('saveCoachMessage', e, st);
     }
@@ -366,7 +366,7 @@ class DatabaseService {
   Future<void> clearCoachMessages() async {
     if (!hasUser) return;
     try {
-      await _api.delete('/coach');
+      await _api.delete('/api/coach');
     } catch (e, st) {
       _reportError('clearCoachMessages', e, st);
     }
@@ -377,7 +377,7 @@ class DatabaseService {
   Future<void> clearAll() async {
     if (!hasUser) return;
     try {
-      await _api.delete('/account');
+      await _api.delete('/api/account');
     } catch (e, st) {
       _reportError('clearAll', e, st);
     }

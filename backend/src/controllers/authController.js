@@ -18,12 +18,6 @@ export async function signup(req, res) {
     const { error: ue } = await supabase.from('users').insert({ id, email: normalizedEmail, password_hash: passwordHash });
     if (ue) throw ue;
 
-    const { error: pe } = await supabase.from('profiles').insert({ id, email: normalizedEmail });
-    if (pe) throw pe;
-
-    const { error: pre } = await supabase.from('progress').insert({ id: generateId(), profile_id: id });
-    if (pre) throw pre;
-
     const token = jwt.sign({ userId: id }, JWT_SECRET, { expiresIn: '90d' });
     res.json({ token, userId: id, email: normalizedEmail });
   } catch (e) {
