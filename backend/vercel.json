@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/workout-reminder",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/workout-missed",
+      "schedule": "0 18 * * *"
     }
   ]
 }
