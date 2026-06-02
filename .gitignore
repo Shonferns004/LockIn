@@ -33,6 +33,7 @@ migrate_working_dir/
 /build/
 /coverage/
 .env
+android/app/google-services.json
 backend/node_modules/
 backend/.env
 
