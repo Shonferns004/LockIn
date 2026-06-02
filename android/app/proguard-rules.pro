@@ -1,0 +1,3 @@
+-keep class com.example.lockin.** { *; }
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
