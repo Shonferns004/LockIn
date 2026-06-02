@@ -13,6 +13,38 @@ function initAdmin() {
   initialized = true;
 }
 
+export async function sendTest(req, res) {
+  try {
+    initAdmin();
+    if (!initialized) {
+      return res.status(500).json({ error: 'FCM not configured' });
+    }
+
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('fcm_token')
+      .eq('id', req.userId)
+      .single();
+
+    if (!profile?.fcm_token) {
+      return res.status(200).json({ sent: false, reason: 'no fcm_token on profile — register token first' });
+    }
+
+    await admin.messaging().send({
+      token: profile.fcm_token,
+      notification: {
+        title: 'LockIn Test',
+        body: 'Push notifications are working! 🔥',
+      },
+    });
+
+    res.json({ sent: true });
+  } catch (err) {
+    console.error('sendTest error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+
 export async function registerToken(req, res) {
   try {
     const { token } = req.body;

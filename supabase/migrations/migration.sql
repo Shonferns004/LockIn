@@ -43,6 +43,7 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   daily_reminders BOOLEAN DEFAULT false,
   difficulty_level TEXT DEFAULT 'Beast',
   sound_muted BOOLEAN DEFAULT false,
+  fcm_token TEXT DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
@@ -194,5 +195,8 @@ CREATE TRIGGER on_new_user_created
 AFTER INSERT ON public.users
 FOR EACH ROW
 EXECUTE FUNCTION public.handle_new_user();
+
+-- Add fcm_token column if not present (for existing databases)
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS fcm_token TEXT DEFAULT NULL;
 
 COMMIT;
