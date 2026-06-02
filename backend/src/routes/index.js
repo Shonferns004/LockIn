@@ -8,6 +8,7 @@ import coachRoutes from './coachRoutes.js';
 import accountRoutes from './accountRoutes.js';
 import statsRoutes from './statsRoutes.js';
 import notificationsRoutes from './notificationsRoutes.js';
+import cronRoutes from './cronRoutes.js';
 
 export function registerRoutes(app) {
   app.use('/api/auth', authRoutes);
@@ -20,6 +21,7 @@ export function registerRoutes(app) {
   app.use('/api/account', accountRoutes);
   app.use('/api/stats', statsRoutes);
   app.use('/api/notifications', notificationsRoutes);
+  app.use('/api/cron', cronRoutes);
 
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok' });

@@ -1,25 +1,10 @@
 import admin from 'firebase-admin';
 import { supabase } from '../config/db.js';
-import { fcmServiceAccount } from '../config/env.js';
-
-let initialized = false;
-function initAdmin() {
-  if (initialized) return;
-  if (!fcmServiceAccount) {
-    console.warn('FCM service account not configured — notifications disabled');
-    return;
-  }
-  admin.initializeApp({ credential: admin.credential.cert(fcmServiceAccount) });
-  initialized = true;
-}
+import { initFcm } from '../utils/fcm.js';
 
 export async function sendTest(req, res) {
   try {
-    initAdmin();
-    if (!initialized) {
-      return res.status(500).json({ error: 'FCM not configured' });
-    }
-
+    initFcm();
     const { data: profile } = await supabase
       .from('profiles')
       .select('fcm_token')
@@ -65,11 +50,7 @@ export async function registerToken(req, res) {
 
 export async function sendRankUp(req, res) {
   try {
-    initAdmin();
-    if (!initialized) {
-      return res.status(500).json({ error: 'FCM not configured' });
-    }
-
+    initFcm();
     const userId = req.userId;
     const { oldRank, newRank } = req.body;
 
