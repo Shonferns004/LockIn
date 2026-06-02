@@ -4,6 +4,7 @@ on:
   schedule:
     - cron: '0 */2 * * *'
     - cron: '0 8 * * *'
+    - cron: '0 18 * * *'
 
 jobs:
   water:
@@ -17,3 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: curl -s https://lock-in-server.vercel.app/api/cron/workout-reminder
+
+  missed:
+    if: github.event.schedule == '0 18 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s https://lock-in-server.vercel.app/api/cron/workout-missed

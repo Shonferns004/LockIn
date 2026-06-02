@@ -1,6 +1,7 @@
 import admin from 'firebase-admin';
 import { supabase } from '../config/db.js';
 import { fcmServiceAccount } from '../config/env.js';
+import { generateMessage } from './aiMessages.js';
 
 let initialized = false;
 export function initFcm() {
@@ -13,11 +14,12 @@ export function initFcm() {
   initialized = true;
 }
 
-export async function sendToUsers({ column, title, body }) {
+export async function sendToAll({ type, column, lazinessColumn = 'laziness' }) {
   if (!initialized) return 0;
+
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('fcm_token')
+    .select(`fcm_token, ${lazinessColumn}`)
     .eq(column, true)
     .not('fcm_token', 'is', null);
 
@@ -26,9 +28,11 @@ export async function sendToUsers({ column, title, body }) {
   let sent = 0;
   for (const p of profiles) {
     try {
+      const laziness = p[lazinessColumn] ?? 5;
+      const body = await generateMessage(type, laziness);
       await admin.messaging().send({
         token: p.fcm_token,
-        notification: { title, body },
+        notification: { title: titleFor(type), body },
       });
       sent++;
     } catch (err) {
@@ -40,6 +44,26 @@ export async function sendToUsers({ column, title, body }) {
       }
     }
   }
-  console.log(`[fcm] "${title}" sent to ${sent}/${profiles?.length} devices`);
+  console.log(`[fcm] "${type}" sent to ${sent}/${profiles.length} devices`);
   return sent;
+}
+
+export async function sendToUser({ fcmToken, type, laziness = 5 }) {
+  if (!initialized || !fcmToken) return false;
+  const body = await generateMessage(type, laziness);
+  await admin.messaging().send({
+    token: fcmToken,
+    notification: { title: titleFor(type), body },
+  });
+  return true;
+}
+
+function titleFor(type) {
+  switch (type) {
+    case 'workout_reminder': return 'Time to Train';
+    case 'workout_missed': return "Don't Skip Today";
+    case 'workout_completed': return 'Workout Complete';
+    case 'water_reminder': return 'Time to Hydrate';
+    default: return 'LockIn';
+  }
 }

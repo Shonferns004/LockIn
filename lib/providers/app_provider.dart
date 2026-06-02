@@ -1581,6 +1581,9 @@ class AppProvider extends ChangeNotifier {
     await completeDay(_session.dayIdx);
     _session.phase = SessionPhase.idle;
     notifyListeners();
+    try {
+      await ApiService().post('/api/cron/workout-completed', {});
+    } catch (_) {}
   }
 
   int _computeStreakFromDates(
