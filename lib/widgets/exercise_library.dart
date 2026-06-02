@@ -5,6 +5,7 @@ import '../models/week_plan.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
 import 'skeletons.dart';
+import '../widgets/animations.dart';
 
 class ExerciseLibrary extends StatefulWidget {
   const ExerciseLibrary({super.key});
@@ -113,7 +114,11 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
                 ),
               )
             else ...[
-              ...pageItems.map((item) => _libraryCard(context, item)),
+              ...pageItems.toList().asMap().entries.map((e) => StaggeredFadeSlide(
+                index: e.key,
+                delayPerItem: const Duration(milliseconds: 50),
+                child: _libraryCard(context, e.value),
+              )),
               const SizedBox(height: 8),
               _PaginationBar(
                 page: page,
@@ -144,6 +149,7 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
               desc: _dynamicDesc(ex),
               source: 'Week ${week.week} | Day ${day.day}',
               howTo: _getHowTo(ex.name),
+              imageUrl: ex.imageUrl,
             ),
           );
         }
@@ -173,6 +179,20 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
         padding: const EdgeInsets.all(14),
         child: Row(
           children: [
+            if (item.imageUrl != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(6),
+                  child: Image.network(
+                    item.imageUrl!,
+                    width: 72,
+                    height: 72,
+                    fit: BoxFit.cover,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ),
+              ),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -281,6 +301,30 @@ class _ExerciseLibraryState extends State<ExerciseLibrary> {
                         children: [
                           Center(child: Container(width: 40, height: 4, color: AppTheme.border)),
                           const SizedBox(height: 20),
+                          if (item.imageUrl != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 16),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(12),
+                                child: Image.network(
+                                  item.imageUrl!,
+                                  height: 200,
+                                  width: double.infinity,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                                  loadingBuilder: (_, child, progress) {
+                                    if (progress == null) return child;
+                                    return Container(
+                                      height: 200,
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.surfaceContainer,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
                           Text(item.name, style: AppTheme.textTheme.displayMedium?.copyWith(color: AppTheme.primary)),
                           Text(item.target, style: AppTheme.textTheme.labelMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
                           const SizedBox(height: 16),
@@ -470,6 +514,7 @@ class _LibraryExercise {
   final String desc;
   final String source;
   final String howTo;
+  final String? imageUrl;
 
   const _LibraryExercise({
     required this.name,
@@ -478,6 +523,7 @@ class _LibraryExercise {
     required this.desc,
     required this.source,
     required this.howTo,
+    this.imageUrl,
   });
 }
 

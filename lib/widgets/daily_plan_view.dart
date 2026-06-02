@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
 import '../widgets/session_player.dart';
+import '../widgets/animations.dart';
 
 class DailyPlanView extends StatelessWidget {
   const DailyPlanView({super.key});
@@ -145,76 +146,75 @@ class DailyPlanView extends StatelessWidget {
 
   void _startSession(BuildContext context) {
     context.read<AppProvider>().startSession();
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => const SessionPlayer(),
-        fullscreenDialog: true,
-      ),
-    );
+    Navigator.of(context).push(slideUpRoute(const SessionPlayer()));
   }
 
   Widget _buildExerciseGrid(List exercises) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 320;
-        final veryNarrow = constraints.maxWidth < 260;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: veryNarrow ? 2.6 : (narrow ? 2.2 : 2.0),
-            crossAxisSpacing: veryNarrow ? 6 : 8,
-            mainAxisSpacing: veryNarrow ? 6 : 8,
-          ),
-          itemCount: exercises.length,
-          itemBuilder: (context, i) {
-            final ex = exercises[i];
-            return Container(
-              padding: EdgeInsets.all(veryNarrow ? 6 : (narrow ? 8 : 12)),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceBright,
-                border: Border.all(color: AppTheme.border, width: 2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    ex.name,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: (veryNarrow ? AppTheme.textTheme.labelSmall : (narrow ? AppTheme.textTheme.labelMedium : AppTheme.textTheme.bodyMedium))
-                        ?.copyWith(fontWeight: FontWeight.w800),
-                  ),
-                  if (!veryNarrow && !narrow)
+        final itemWidth = (constraints.maxWidth - 8) / 2;
+        return Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: exercises.map<Widget>((ex) {
+            return SizedBox(
+              width: itemWidth,
+              child: Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceBright,
+                  border: Border.all(color: AppTheme.border, width: 2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (ex.imageUrl != null && !narrow)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: Image.network(
+                            ex.imageUrl!,
+                            height: 40,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                          ),
+                        ),
+                      ),
                     Text(
-                      ex.target,
-                      maxLines: 1,
+                      ex.name,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTheme.textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
+                      style: AppTheme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.w800),
                     ),
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: veryNarrow ? 4 : 8, vertical: veryNarrow ? 1 : 3),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryContainer.withValues(alpha: 0.3),
-                      border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 1),
-                    ),
-                    child: Text(
-                      '${ex.sets}×${ex.reps}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTheme.textTheme.labelSmall?.copyWith(
-                        color: AppTheme.primary,
-                        fontSize: veryNarrow ? 8 : 9,
+                    if (!narrow)
+                      Text(
+                        ex.target,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
+                      ),
+                    Container(
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryContainer.withValues(alpha: 0.3),
+                        border: Border.all(color: AppTheme.primary.withValues(alpha: 0.3), width: 1),
+                      ),
+                      child: Text(
+                        '${ex.sets}\u00d7${ex.reps}',
+                        style: AppTheme.textTheme.labelSmall?.copyWith(color: AppTheme.primary, fontSize: 9),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             );
-          },
+          }).toList(),
         );
       },
     );
@@ -224,48 +224,45 @@ class DailyPlanView extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final narrow = constraints.maxWidth < 320;
-        return GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
-            childAspectRatio: narrow ? 2.3 : 2.6,
-            crossAxisSpacing: 6,
-            mainAxisSpacing: 6,
-          ),
-          itemCount: exercises.length,
-          itemBuilder: (context, i) {
-            final ex = exercises[i];
-            return Container(
-              padding: EdgeInsets.all(narrow ? 6 : 10),
-              decoration: BoxDecoration(
-                color: AppTheme.surfaceBright,
-                border: Border.all(color: AppTheme.border, width: 2),
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(
-                    ex.name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: (narrow ? AppTheme.textTheme.labelSmall : AppTheme.textTheme.labelMedium)?.copyWith(fontWeight: FontWeight.bold),
-                  ),
-                  if (!narrow) ...[
-                    const SizedBox(height: 2),
+        final itemWidth = (constraints.maxWidth - 6) / 2;
+        return Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: exercises.map<Widget>((ex) {
+            return SizedBox(
+              width: itemWidth,
+              child: Container(
+                padding: EdgeInsets.all(narrow ? 8 : 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.surfaceBright,
+                  border: Border.all(color: AppTheme.border, width: 2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
                     Text(
-                      '${ex.target} · ${ex.sets}×${ex.reps}',
+                      ex.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTheme.textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
+                      style: (narrow ? AppTheme.textTheme.labelSmall : AppTheme.textTheme.labelMedium)?.copyWith(fontWeight: FontWeight.bold),
                     ),
+                    if (!narrow) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                        '${ex.target} \u00b7 ${ex.sets}\u00d7${ex.reps}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTheme.textTheme.labelSmall?.copyWith(color: AppTheme.onSurfaceVariant),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             );
-          },
+          }).toList(),
         );
       },
     );

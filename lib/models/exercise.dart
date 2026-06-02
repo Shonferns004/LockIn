@@ -5,6 +5,7 @@ class Exercise {
   final String target;
   final String? logKey;
   final int logVal;
+  String? imageUrl;
 
   Exercise({
     required this.name,
@@ -13,6 +14,7 @@ class Exercise {
     required this.target,
     this.logKey,
     this.logVal = 0,
+    this.imageUrl,
   });
 
   factory Exercise.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,7 @@ class Exercise {
       target: json['target'] as String,
       logKey: (json['logKey'] ?? json['log_key']) as String?,
       logVal: (json['logVal'] ?? json['log_val'] ?? 0) as int,
+      imageUrl: json['imageUrl'] as String?,
     );
   }
 
@@ -33,6 +36,7 @@ class Exercise {
     'target': target,
     'log_key': logKey,
     'log_val': logVal,
+    'imageUrl': imageUrl,
   };
 
   bool get isTimed => reps.contains('s');

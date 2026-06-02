@@ -1,13 +1,11 @@
--- Migration 005: Full schema consolidation + trigger for local auth
+-- Migration 006: Final consolidated schema
 -- Run this in Supabase SQL Editor. Safe to run multiple times (idempotent).
--- The app uses direct email+password auth against the `users` table.
--- When a row is inserted into `users`, this trigger auto-creates
--- the user's profile and progress rows so the app works immediately.
+-- Covers: all 11 tables, indexes, RLS disable, user auto-bootstrap trigger.
 
 BEGIN;
 
 --------------------------------------------------
--- 1. Ensure all tables exist with all columns
+-- 1. Tables
 --------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS public.users (
@@ -136,14 +134,7 @@ CREATE TABLE IF NOT EXISTS public.coach_messages (
 );
 
 --------------------------------------------------
--- 2. Backfill missing columns (safe for existing tables)
---------------------------------------------------
-
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS sound_muted BOOLEAN DEFAULT false;
-
---------------------------------------------------
--- 3. Indexes
+-- 2. Indexes
 --------------------------------------------------
 
 CREATE INDEX IF NOT EXISTS idx_week_plans_profile ON public.week_plans(profile_id);
@@ -159,7 +150,7 @@ CREATE INDEX IF NOT EXISTS idx_week_plans_start_date ON public.week_plans(plan_s
 CREATE INDEX IF NOT EXISTS idx_day_plans_scheduled_date ON public.day_plans(scheduled_date);
 
 --------------------------------------------------
--- 4. Disable RLS on all tables (app uses anon key directly)
+-- 3. Disable RLS (app uses service-role key via backend)
 --------------------------------------------------
 
 ALTER TABLE public.users DISABLE ROW LEVEL SECURITY;
@@ -175,11 +166,8 @@ ALTER TABLE public.skipped_days DISABLE ROW LEVEL SECURITY;
 ALTER TABLE public.coach_messages DISABLE ROW LEVEL SECURITY;
 
 --------------------------------------------------
--- 5. Trigger: when a user is inserted (via app signup),
---    auto-create profile + progress rows.
+-- 4. Trigger: auto-bootstrap profile + progress on signup
 --------------------------------------------------
-
-DROP TRIGGER IF EXISTS on_new_user_created ON public.users;
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS trigger
@@ -199,6 +187,8 @@ BEGIN
   RETURN NEW;
 END;
 $$;
+
+DROP TRIGGER IF EXISTS on_new_user_created ON public.users;
 
 CREATE TRIGGER on_new_user_created
 AFTER INSERT ON public.users

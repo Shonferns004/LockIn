@@ -42,7 +42,7 @@ class GroqService {
     final intensity = profile.intensityLabel;
 
     String prompt =
-        'Generate week $weekNum of a calisthenics + face plan. ABSOLUTELY ZERO EQUIPMENT. Only bare bodyweight and floor. No chairs, bottles, door anchors, or props.\n\n';
+        'Generate week $weekNum of a 100% equipment-free calisthenics + face plan. NO pull-ups, NO rows, NO rowing motion, NO pull-up bar, NO doorway bar, NO hanging, NO rings. ABSOLUTELY ZERO exercises that require pulling bodyweight up. Only floor, wall, chair, bed allowed — nothing that needs installation.\n\n';
     if (trainingContext != null && trainingContext.isNotEmpty) {
       prompt += 'CURRENT TRAINING CONTEXT FROM DATABASE:\n$trainingContext\n';
     }
@@ -61,12 +61,12 @@ class GroqService {
       prompt += '  Day ${i + 1}: ${dayTypes[i]} - icon: "${dayIcons[i]}"\n';
     }
     prompt +=
-        '\nFor non-rest days, create EXACTLY 5 bodyweight exercises (zero equipment), 3-4 face exercises, and 4 lookmax daily tips. Rest days (4,7) must have empty exercise lists, empty faceExercises, and empty lookmax.\n\n';
+        '\nFor non-rest days, create EXACTLY 6 bodyweight exercises (only floor, chair, bed, wall — NO pull-ups, NO rows, NO hanging), EXACTLY 4 face exercises, and 4 lookmax daily tips. Rest days (4,7) must have empty exercise lists, empty faceExercises, and empty lookmax.\n\n';
     prompt += 'Return ONLY valid JSON with this structure:\n';
     prompt +=
         '{\n  "week": $weekNum,\n  "days": [\n    {\n      "day": $startDay,\n      "week": $weekNum,\n      "title": "PUSH DAY",\n      "focus": "Chest · Triceps",\n      "icon": "🔥",\n      "exercises": [\n        { "name": "Push-Ups", "sets": 3, "reps": "10", "target": "Chest · Triceps", "logKey": "pushup", "logVal": 10 }\n      ],\n      "faceExercises": [\n        { "name": "Chin Tucks", "sets": 3, "reps": "15", "target": "Neck · Chin" }\n      ],\n      "lookmax": [\n        "🧴 Skincare: Wash face + moisturize AM/PM"\n      ]\n    }\n  ]\n}';
     prompt +=
-        '\n\nRules:\n- Body exercises logKey: "pushup","squat","plank","burpee", or null.\n- Face exercises have NO logKey/logVal.\n- Timed exercises use "30s" format for reps.\n- Day 4 and 7: exercises: [], faceExercises: [], lookmax: [].\n- Day numbering starts from $startDay.\n- Face exercises: use detailed, realistic cues for mewing, chin tucks, jaw clenches, cheek sculptor, eye squints, neck resistance, brow lift, lip press.\n- lookmax: 4 short daily tips covering skincare, posture, diet/grooming, sleep.\n- Progressively increase volume, exercise difficulty, or time under tension compared to the previous week without adding equipment.';
+        '\n\nRules:\n- Body exercises logKey: "pushup","squat","plank","burpee", or null.\n- Face exercises have NO logKey/logVal.\n- Timed exercises use "30s" format for reps.\n- DAY 4 AND 7: exercises: [], faceExercises: [], lookmax: [].\n- Day numbering starts from $startDay.\n- Face exercises: use detailed, realistic cues for mewing, chin tucks, jaw clenches, cheek sculptor, eye squints, neck resistance, brow lift, lip press.\n- lookmax: 4 short daily tips covering skincare, posture, diet/grooming, sleep.\n- Progressively increase volume, exercise difficulty, or time under tension compared to the previous week without adding equipment.\n- CRITICAL: Exercise names MUST NOT have "(bodyweight)" or "(no equipment)" or any brackets with descriptors. Just the plain name like "Push-Ups", not "Push-Ups (bodyweight)".';
 
     final body = jsonEncode({
       'model': 'llama-3.3-70b-versatile',
@@ -74,7 +74,7 @@ class GroqService {
         {
           'role': 'system',
           'content':
-              'You are an elite calisthenics coach. Generate a weekly workout plan as JSON. Only home bodyweight exercises, no equipment.',
+              'You are an elite calisthenics coach. Generate a weekly workout plan as JSON. Zero equipment, no pull-ups, no hanging exercises. Bodyweight only — floor, chair, bed, wall.',
         },
         {'role': 'user', 'content': prompt},
       ],

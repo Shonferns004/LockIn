@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
+import '../widgets/animations.dart';
 
 class StepsScreen extends StatelessWidget {
   final ScrollController? scrollController;
@@ -34,6 +35,8 @@ class StepsScreen extends StatelessWidget {
               _WaterCard(app: app),
               const SizedBox(height: 32),
               _SettingsCard(app: app),
+              const SizedBox(height: 32),
+              _StepHistoryCard(app: app),
             ],
           ),
         );
@@ -306,7 +309,7 @@ class _SettingsCard extends StatelessWidget {
                     Text('Water reminders', style: AppTheme.textTheme.bodyLarge),
                     const SizedBox(height: 4),
                     Text(
-                      'Automatic reminders are scheduled every 2 hours when notifications are allowed.',
+                      'Push notifications will remind you to drink water every 2 hours.',
                       style: AppTheme.textTheme.labelMedium?.copyWith(color: AppTheme.onSurfaceVariant),
                     ),
                   ],
@@ -371,6 +374,123 @@ class _SettingsCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _StepHistoryCard extends StatelessWidget {
+  final AppProvider app;
+  const _StepHistoryCard({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final history = app.stepHistory;
+
+    final sorted = history.entries.toList()
+      ..sort((a, b) => b.key.compareTo(a.key));
+    final recent = sorted.take(14).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('STEP HISTORY',
+            style: AppTheme.textTheme.labelLarge
+                ?.copyWith(color: AppTheme.onSurfaceVariant, letterSpacing: 2)),
+        const SizedBox(height: 16),
+        NeoCard(
+          bg: Colors.white,
+          child: history.isEmpty
+              ? Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Center(
+                    child: Text(
+                      'Step data will appear here after your first day of walking with the tracker ON.',
+                      textAlign: TextAlign.center,
+                      style: AppTheme.textTheme.bodyMedium?.copyWith(
+                        color: AppTheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                )
+              : Column(
+            children: recent.toList().asMap().entries.map((entry) {
+              final i = entry.key;
+              final e = entry.value;
+              final date = e.key;
+              final steps = e.value;
+              final goal = app.stepGoal;
+              final pct = goal > 0 ? (steps / goal).clamp(0.0, 1.0) : 0.0;
+              final isToday = date == _dateKey(DateTime.now());
+              return StaggeredFadeSlide(
+                index: i,
+                delayPerItem: const Duration(milliseconds: 50),
+                child: Column(
+                  children: [
+                    if (i != 0)
+                      const Divider(height: 16, color: AppTheme.border),
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 100,
+                          child: Text(
+                            _formatDate(date),
+                            style: AppTheme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: isToday ? FontWeight.w700 : FontWeight.w400,
+                              color: isToday ? AppTheme.primary : AppTheme.onBackground,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: LinearProgressIndicator(
+                              value: pct,
+                              backgroundColor: AppTheme.surfaceContainer,
+                              valueColor: AlwaysStoppedAnimation(
+                                pct >= 1 ? AppTheme.tertiary : AppTheme.primary,
+                              ),
+                              minHeight: 10,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        SizedBox(
+                          width: 56,
+                          child: Text(
+                            '$steps',
+                            textAlign: TextAlign.right,
+                            style: AppTheme.textTheme.labelLarge?.copyWith(
+                              fontWeight: FontWeight.w700,
+                              color: AppTheme.primary,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(String iso) {
+    final parsed = DateTime.tryParse(iso);
+    if (parsed == null) return iso;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final diff = today.difference(parsed).inDays;
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    return '${parsed.month}/${parsed.day}';
+  }
+
+  String _dateKey(DateTime date) {
+    final d = date.toLocal();
+    return DateTime(d.year, d.month, d.day).toIso8601String().substring(0, 10);
   }
 }
 

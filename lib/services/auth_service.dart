@@ -10,11 +10,11 @@ class AuthService {
   String? _email;
   String? _lastError;
 
-  Future<void> init() async {
+  Future<void> init({Duration timeout = const Duration(seconds: 5)}) async {
     await _api.init();
     if (_api.isLoggedIn) {
       try {
-        await _api.verify();
+        await _api.verify().timeout(timeout);
       } catch (_) {
         await _api.logout();
       }

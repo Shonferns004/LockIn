@@ -14,14 +14,17 @@ import '../models/session_state.dart';
 import '../models/exercise.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
+import '../services/workoutx_service.dart';
 import '../services/groq_service.dart';
-import '../services/notification_service.dart';
+import '../services/api_service.dart';
+import '../services/fcm_service.dart';
 
 class AppProvider extends ChangeNotifier {
   final DatabaseService db;
 
   AppProvider({required this.db});
   GroqService? _groq;
+  WorkoutXService? _workoutX;
 
   Profile? _profile;
   List<WeekPlan> _weeks = [];
@@ -53,6 +56,7 @@ class AppProvider extends ChangeNotifier {
   final Map<String, Map<String, String>> _exerciseGuideCache = {};
   final Map<String, Map<String, String>> _faceGuideCache = {};
   final Map<String, String> _motivationCache = {};
+  final Map<String, ExerciseMedia> _exerciseMediaCache = {};
 
   // Step tracking
   int _dailySteps = 0;
@@ -66,6 +70,9 @@ class AppProvider extends ChangeNotifier {
   int _dailyWater = 0;
   bool _waterReminder = false;
   static const String _groqPrefsKey = 'groq_api_key';
+  static const String _lastPedometerKey = 'last_pedometer_total';
+  static const String _stepHistoryKey = 'step_history';
+  Map<String, int> _stepHistory = {};
   bool _stepSensorSupported = true;
   bool _stepPermissionGranted = false;
   String _stepStatusMessage = '';
@@ -86,6 +93,7 @@ class AppProvider extends ChangeNotifier {
   bool get isHydrating => _isHydrating;
   List<Map<String, String>> get coachHistory => _coachHistory;
   bool get hasGroqKey => _groq != null;
+  bool get hasWorkoutX => _workoutX != null;
   bool get dailyReminders => _dailyReminders;
   String get difficultyLevel => _difficultyLevel;
   bool get soundMuted => _soundMuted;
@@ -100,6 +108,7 @@ class AppProvider extends ChangeNotifier {
   int get waterGoal => _waterGoal;
   int get dailyWater => _dailyWater;
   bool get waterReminderEnabled => _waterReminder;
+  Map<String, int> get stepHistory => Map.unmodifiable(_stepHistory);
   int get strideLength => _profile?.strideLength ?? 70;
   String? get groqKey => _profile?.groqKey;
   String get experience => _normalizeExperience(_profile?.experience ?? 'beginner');
@@ -202,12 +211,12 @@ class AppProvider extends ChangeNotifier {
 
     if (notifyRankUp && _experienceIndex(nextRank) > currentIndex) {
       try {
-        await NotificationService.showExperienceRankUpNotification(
-          oldRank: currentRank,
-          newRank: nextRank,
-        );
+        await ApiService().post('/api/notifications/rank-up', {
+          'oldRank': currentRank,
+          'newRank': nextRank,
+        });
       } catch (e, st) {
-        debugPrint('Failed to show experience rank notification: $e');
+        debugPrint('Failed to send rank-up notification: $e');
         debugPrint(st.toString());
       }
     }
@@ -351,9 +360,30 @@ class AppProvider extends ChangeNotifier {
     _stepSensorSupported = true;
     _stepPermissionGranted = false;
     _stepStatusMessage = '';
+    _stepHistory = {};
 
-    _profile = await db.loadProfile();
+    final results = await Future.wait([
+      db.loadProfile(),
+      db.loadWeeks(),
+      db.loadProgress(),
+      db.loadCompletedDays(),
+      db.loadCompletedDates(),
+      db.loadSkippedDates(),
+      db.loadCoachMessages(),
+      db.difficultyLevel,
+    ]);
     if (token != _loadToken) return;
+    _profile = results[0] as Profile?;
+    _weeks = (results[1] as List<WeekPlan>?) ?? [];
+    _progress = (results[2] as Progress?) ?? Progress();
+    _completedDays = (results[3] as List<int>?) ?? [];
+    _completedDates = (results[4] as List<String>?) ?? [];
+    _skippedDates = (results[5] as List<String>?) ?? [];
+    _coachHistory.addAll((results[6] as List<Map<String, String>>?) ?? []);
+    _trimCoachHistory();
+    _difficultyLevel = (results[7] as String?) ?? 'Beast';
+    _sortWeeksAndDays();
+    unawaited(populateExerciseMedia());
     final bundledGroqKey = dotenv.env['GROQ_API_KEY'] ?? '';
     if (_profile != null && _profile!.groqKey.isEmpty) {
       final prefs = await SharedPreferences.getInstance();
@@ -364,32 +394,11 @@ class AppProvider extends ChangeNotifier {
         _profile = _profile!.copyWith(groqKey: bundledGroqKey);
       }
     }
-    _weeks = await db.loadWeeks();
-    if (token != _loadToken) return;
-    _sortWeeksAndDays();
-    _progress = await db.loadProgress();
-    if (token != _loadToken) return;
-    _completedDays = await db.loadCompletedDays();
-    if (token != _loadToken) return;
-    _completedDates = await db.loadCompletedDates();
-    if (token != _loadToken) return;
-    _skippedDates = await db.loadSkippedDates();
-    if (token != _loadToken) return;
-    _coachHistory.addAll(await db.loadCoachMessages());
-    _trimCoachHistory();
     if (token != _loadToken) return;
     _dailyReminders = _profile?.dailyReminders ?? false;
     _waterReminder = _profile?.waterReminder ?? false;
-    if (token != _loadToken) return;
-    _difficultyLevel = await db.difficultyLevel;
-    if (token != _loadToken) return;
     _soundMuted = _profile?.soundMuted ?? false;
 
-    if (_completedDays.isNotEmpty) {
-      _progress.workouts = _completedDays.length;
-    }
-
-    await _syncSkippedWorkoutDays();
     if (token != _loadToken) return;
 
     _progress.streak = _computeStreakFromDates(_completedDates, _skippedDates);
@@ -401,13 +410,19 @@ class AppProvider extends ChangeNotifier {
     _waterGoal = _profile?.waterGoal ?? 2000;
     _dailyWater = _profile?.dailyWater ?? 0;
     _waterReminder = _profile?.waterReminder ?? false;
+    _updateStepStats();
 
     _loadCurrentSelectionFromSchedule();
 
     final today = _dateKey(DateTime.now());
+    await _loadStepHistory();
     if (_profile != null) {
       var needsSave = false;
       if (_profile!.lastStepDate != today) {
+        if (_dailySteps > 0) {
+          _stepHistory[_profile!.lastStepDate] = _dailySteps;
+          await _saveStepHistory();
+        }
         _dailySteps = 0;
         _profile = _profile!.copyWith(dailySteps: 0, lastStepDate: today);
         needsSave = true;
@@ -450,34 +465,18 @@ class AppProvider extends ChangeNotifier {
       _groq = GroqService(key);
     }
 
+    final wxKey = dotenv.env['WORKOUTX_KEY'] ?? '';
+    if (wxKey.isNotEmpty) {
+      _workoutX = WorkoutXService(wxKey);
+    }
+
     await _loadPlanAnchorDate();
     _syncCurrentViewWithToday();
 
     if (_profile != null) {
-      if (_dailyReminders) {
-        final workoutEnabled =
-            await NotificationService.enableWorkoutReminders();
-        _dailyReminders = workoutEnabled;
-        if (_profile!.dailyReminders != workoutEnabled) {
-          _profile = _profile!.copyWith(dailyReminders: workoutEnabled);
-          await db.saveDailyReminders(workoutEnabled);
-        }
-      } else {
-        await NotificationService.cancelWorkoutReminder();
-      }
-
-      if (_waterReminder) {
-        final waterEnabled = await NotificationService.enableWaterReminders();
-        _waterReminder = waterEnabled;
-        if (_profile!.waterReminder != waterEnabled) {
-          _profile = _profile!.copyWith(waterReminder: waterEnabled);
-          await db.saveWaterReminderEnabled(waterEnabled);
-        }
-      } else {
-        await NotificationService.cancelWaterReminder();
-      }
-    } else {
-      await NotificationService.cancelAll();
+      _dailyReminders = _profile!.dailyReminders ?? false;
+      _waterReminder = _profile!.waterReminder ?? false;
+      await FcmService.registerCurrentToken();
     }
 
     if (token == _loadToken) {
@@ -610,26 +609,70 @@ class AppProvider extends ChangeNotifier {
   void _onStepCount(StepCount event) {
     final current = event.steps;
     if (_stepCumulative == 0) {
-      _stepCumulative = current - _dailySteps;
-      if (_stepCumulative < 0) _stepCumulative = 0;
+      // First event after init — recover any steps that happened while
+      // the app was closed by comparing with the last saved sensor total.
+      unawaited(_recoverMissedSteps(current));
+      _stepCumulative = current;
       return;
     }
     final delta = current - _stepCumulative;
     if (delta < 0) {
+      // Sensor reset (e.g. device reboot)
       _stepCumulative = current;
       return;
     }
     if (delta > 0) {
       _dailySteps += delta;
       _stepCumulative = current;
-      unawaited(db.saveDailySteps(_dailySteps));
-      if (_profile != null) {
-        _profile = _profile!.copyWith(
-            dailySteps: _dailySteps, lastStepDate: _dateKey(DateTime.now()));
-      }
+      unawaited(_persistStepState(current));
       _updateStepStats();
       _scheduleStepNotify();
     }
+  }
+
+  Future<void> _recoverMissedSteps(int currentTotal) async {
+    final prefs = await SharedPreferences.getInstance();
+    final lastTotal = prefs.getInt(_lastPedometerKey);
+    if (lastTotal != null && currentTotal > lastTotal) {
+      final missed = currentTotal - lastTotal;
+      if (missed > 0 && missed < 10000) {
+        _dailySteps += missed;
+        if (_profile != null) {
+          _profile = _profile!.copyWith(
+              dailySteps: _dailySteps, lastStepDate: _dateKey(DateTime.now()));
+        }
+        _updateStepStats();
+        if (!_disposed) notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _persistStepState(int currentTotal) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_lastPedometerKey, currentTotal);
+    unawaited(db.saveDailySteps(_dailySteps));
+    _stepHistory[_dateKey(DateTime.now())] = _dailySteps;
+    unawaited(_saveStepHistory());
+    if (_profile != null) {
+      _profile = _profile!.copyWith(
+          dailySteps: _dailySteps, lastStepDate: _dateKey(DateTime.now()));
+    }
+  }
+
+  Future<void> _loadStepHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_stepHistoryKey);
+    if (raw != null && raw.isNotEmpty) {
+      final decoded = Map<String, dynamic>.from(
+          const JsonDecoder().convert(raw) as Map);
+      _stepHistory = decoded.map((k, v) => MapEntry(k, (v as num).toInt()));
+    }
+  }
+
+  Future<void> _saveStepHistory() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(
+        _stepHistoryKey, const JsonEncoder().convert(_stepHistory));
   }
 
   void _scheduleStepNotify() {
@@ -746,22 +789,10 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> toggleWaterReminder(bool enabled) async {
-    if (!enabled) {
-      await NotificationService.cancelWaterReminder();
-      _waterReminder = false;
-      await db.saveWaterReminderEnabled(false);
-      if (_profile != null) {
-        _profile = _profile!.copyWith(waterReminder: false);
-      }
-      notifyListeners();
-      return;
-    }
-
-    final granted = await NotificationService.enableWaterReminders();
-    _waterReminder = granted;
-    await db.saveWaterReminderEnabled(granted);
+    _waterReminder = enabled;
+    await db.saveWaterReminderEnabled(enabled);
     if (_profile != null) {
-      _profile = _profile!.copyWith(waterReminder: granted);
+      _profile = _profile!.copyWith(waterReminder: enabled);
     }
     notifyListeners();
   }
@@ -773,20 +804,6 @@ class AppProvider extends ChangeNotifier {
     await db.saveProfile(_profile!);
     _dailyReminders = _profile?.dailyReminders ?? false;
     _waterReminder = _profile?.waterReminder ?? false;
-    if (_dailyReminders) {
-      _dailyReminders = await NotificationService.enableWorkoutReminders();
-      _profile = _profile!.copyWith(dailyReminders: _dailyReminders);
-      await db.saveDailyReminders(_dailyReminders);
-    } else {
-      await NotificationService.cancelWorkoutReminder();
-    }
-    if (_waterReminder) {
-      _waterReminder = await NotificationService.enableWaterReminders();
-      _profile = _profile!.copyWith(waterReminder: _waterReminder);
-      await db.saveWaterReminderEnabled(_waterReminder);
-    } else {
-      await NotificationService.cancelWaterReminder();
-    }
     notifyListeners();
   }
 
@@ -803,7 +820,6 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> resetProfile() async {
-    await NotificationService.cancelAll();
     await db.clearAll();
     _profile = null;
     _weeks = [];
@@ -819,9 +835,11 @@ class AppProvider extends ChangeNotifier {
     _dailySteps = 0;
     _dailyWater = 0;
     _groq = null;
+    _workoutX = null;
     _exerciseGuideCache.clear();
     _faceGuideCache.clear();
     _motivationCache.clear();
+    _exerciseMediaCache.clear();
     notifyListeners();
   }
 
@@ -841,23 +859,11 @@ class AppProvider extends ChangeNotifier {
   }
 
   Future<void> setDailyReminders(bool val) async {
-    if (!val) {
-      await NotificationService.cancelWorkoutReminder();
-      _dailyReminders = false;
-      if (_profile != null) {
-        _profile = _profile!.copyWith(dailyReminders: false);
-      }
-      await db.saveDailyReminders(false);
-      notifyListeners();
-      return;
-    }
-
-    final enabled = await NotificationService.enableWorkoutReminders();
-    _dailyReminders = enabled;
+    _dailyReminders = val;
     if (_profile != null) {
-      _profile = _profile!.copyWith(dailyReminders: enabled);
+      _profile = _profile!.copyWith(dailyReminders: val);
     }
-    await db.saveDailyReminders(enabled);
+    await db.saveDailyReminders(val);
     notifyListeners();
   }
 
@@ -891,6 +897,50 @@ class AppProvider extends ChangeNotifier {
       await prefs.setString(_groqPrefsKey, key);
     }
     _groq = GroqService(key);
+    notifyListeners();
+  }
+
+  // WorkoutX media
+  Future<ExerciseMedia?> lookupExerciseMedia(String exerciseName) async {
+    final key = exerciseName.trim().toLowerCase();
+    if (_exerciseMediaCache.containsKey(key)) return _exerciseMediaCache[key];
+    if (_workoutX == null) return null;
+
+    final media = await _workoutX!.lookup(exerciseName);
+    if (media != null) {
+      _exerciseMediaCache[key] = media;
+    }
+    return media;
+  }
+
+  Future<void> populateExerciseMedia() async {
+    if (_workoutX == null) return;
+    final seen = <String>{};
+    final futures = <Future<void>>[];
+    for (final week in _weeks) {
+      for (final day in week.days) {
+        for (final ex in day.exercises) {
+          final name = ex.name.trim();
+          final key = name.toLowerCase();
+          if (seen.contains(key)) {
+            final cached = _exerciseMediaCache[key];
+            if (cached != null) {
+              ex.imageUrl = cached.imageUrl;
+            }
+            continue;
+          }
+          seen.add(key);
+          futures.add(() async {
+            final media = await _workoutX!.lookup(name);
+            if (media != null) {
+              _exerciseMediaCache[key] = media;
+              ex.imageUrl = media.imageUrl;
+            }
+          }());
+        }
+      }
+    }
+    await Future.wait(futures);
     notifyListeners();
   }
 
@@ -1051,6 +1101,13 @@ class AppProvider extends ChangeNotifier {
                 target: 'Core',
                 logKey: 'plank',
                 logVal: 20),
+            Exercise(
+                name: 'Incline Push-Ups',
+                sets: 3,
+                reps: '10',
+                target: 'Chest · Shoulders',
+                logKey: 'pushup',
+                logVal: 10),
           ],
           faceExercises: [
             FaceExercise(
@@ -1104,6 +1161,11 @@ class AppProvider extends ChangeNotifier {
                 sets: 3,
                 reps: '15s',
                 target: 'Posterior Chain'),
+            Exercise(
+                name: 'Prone Cobra Hold',
+                sets: 3,
+                reps: '15s',
+                target: 'Upper Back · Posture'),
           ],
           faceExercises: [
             FaceExercise(
@@ -1156,6 +1218,11 @@ class AppProvider extends ChangeNotifier {
                 name: 'Calf Raises', sets: 3, reps: '20', target: 'Calves'),
             Exercise(
                 name: 'Wall Sit', sets: 3, reps: '20s', target: 'Quads · Core'),
+            Exercise(
+                name: 'Bulgarian Split Squats',
+                sets: 3,
+                reps: '8',
+                target: 'Quads · Glutes'),
           ],
           faceExercises: [
             FaceExercise(
@@ -1225,6 +1292,11 @@ class AppProvider extends ChangeNotifier {
                 target: 'Core',
                 logKey: 'plank',
                 logVal: 20),
+            Exercise(
+                name: 'Chair Dips',
+                sets: 3,
+                reps: '8',
+                target: 'Triceps · Shoulders'),
           ],
           faceExercises: [
             FaceExercise(
@@ -1280,6 +1352,11 @@ class AppProvider extends ChangeNotifier {
                 target: 'Core',
                 logKey: 'plank',
                 logVal: 30),
+            Exercise(
+                name: 'Feet-Elevated Plank',
+                sets: 3,
+                reps: '20s',
+                target: 'Core · Shoulders'),
           ],
           faceExercises: [
             FaceExercise(

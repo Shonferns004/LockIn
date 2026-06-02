@@ -6,7 +6,7 @@ class Profile {
   final int weight;
   final int age;
   final String gender;
-  final String goal;
+  final List<String> goals;
   final String experience;
   final int timePerSession;
   final String health;
@@ -34,7 +34,7 @@ class Profile {
     required this.weight,
     required this.age,
     required this.gender,
-    required this.goal,
+    this.goals = const ['build_muscle'],
     required this.experience,
     required this.timePerSession,
     this.health = '',
@@ -78,6 +78,14 @@ class Profile {
       return value == null ? fallback : value.toString();
     }
 
+    List<String> parseGoals(dynamic value) {
+      if (value is List) return value.cast<String>();
+      if (value is String && value.isNotEmpty) {
+        return value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+      }
+      return ['build_muscle'];
+    }
+
     return Profile(
       username: stringVal('username', 'LockIn'),
       email: stringVal('email', ''),
@@ -86,7 +94,7 @@ class Profile {
       weight: intVal('weight', 70),
       age: intVal('age', 25),
       gender: stringVal('gender', ''),
-      goal: stringVal('goal', 'build_muscle'),
+      goals: parseGoals(json['goal']),
       experience: stringVal('experience', 'beginner'),
       timePerSession: intVal('timePerSession', intVal('time_per_session', 20)),
       health: stringVal('health', ''),
@@ -119,7 +127,7 @@ class Profile {
     int? weight,
     int? age,
     String? gender,
-    String? goal,
+    List<String>? goals,
     String? experience,
     int? timePerSession,
     String? health,
@@ -147,7 +155,7 @@ class Profile {
       weight: weight ?? this.weight,
       age: age ?? this.age,
       gender: gender ?? this.gender,
-      goal: goal ?? this.goal,
+      goals: goals ?? this.goals,
       experience: experience ?? this.experience,
       timePerSession: timePerSession ?? this.timePerSession,
       health: health ?? this.health,
@@ -177,7 +185,7 @@ class Profile {
         'weight': weight,
         'age': age,
         'gender': gender,
-        'goal': goal,
+        'goal': goals.join(', '),
         'experience': experience,
         'time_per_session': timePerSession,
         'health': health,
@@ -197,6 +205,8 @@ class Profile {
         'daily_reminders': dailyReminders,
         'sound_muted': soundMuted,
       };
+
+  String get goal => goals.join(', ');
 
   String get intensityLabel {
     if (laziness <= 3) return 'Chill - easy pace';

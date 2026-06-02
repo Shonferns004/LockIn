@@ -14,7 +14,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  static const Duration _minVisible = Duration(milliseconds: 200);
+  static const Duration _maxSplash = Duration(seconds: 2);
   late final AnimationController _pulseController;
   late final Animation<double> _scale;
   late final Animation<double> _opacity;
@@ -42,49 +42,40 @@ class _SplashScreenState extends State<SplashScreen>
     super.dispose();
   }
 
+  Future<String> _resolveRoute(AppProvider app) async {
+    final auth = AuthService();
+    await auth.init();
+    if (!auth.isLoggedIn) return 'login';
+
+    final userUuid = auth.userUuid;
+    if (userUuid == null || userUuid.isEmpty) return 'login';
+
+    await app.bindUser(userUuid);
+    final profile = app.profile;
+    if (profile == null || !profile.onboardingCompleted) return 'onboarding';
+    return 'home';
+  }
+
   Future<void> _route() async {
     if (_routing) return;
     _routing = true;
 
-    try {
-      final startedAt = DateTime.now();
-      final auth = AuthService();
-      await auth.init();
+    final app = context.read<AppProvider>();
+    final route = await Future.any([
+      _resolveRoute(app),
+      Future.delayed(_maxSplash, () => ''),
+    ]);
+
+    if (!mounted) return;
+
+    final target = route.isNotEmpty
+        ? route
+        : (AuthService().isLoggedIn ? 'home' : 'login');
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-
-      String route = 'login';
-      if (auth.isLoggedIn) {
-        final userUuid = auth.userUuid;
-        if (userUuid != null && userUuid.isNotEmpty) {
-          final app = context.read<AppProvider>();
-          await app.bindUser(userUuid);
-        }
-        if (!mounted) return;
-
-        final app = context.read<AppProvider>();
-        final profile = app.profile;
-        route = profile == null
-            ? 'onboarding'
-            : (profile.onboardingCompleted ? 'home' : 'onboarding');
-      }
-
-      final elapsed = DateTime.now().difference(startedAt);
-      if (elapsed < _minVisible) {
-        await Future.delayed(_minVisible - elapsed);
-      }
-      if (!mounted) return;
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed(route);
-      });
-    } catch (_) {
-      if (!mounted) return;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (!mounted) return;
-        Navigator.of(context).pushReplacementNamed('login');
-      });
-    }
+      Navigator.of(context).pushReplacementNamed(target);
+    });
   }
 
   @override

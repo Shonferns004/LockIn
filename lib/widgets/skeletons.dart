@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import '../theme.dart';
 
@@ -105,62 +103,41 @@ class SkeletonCard extends StatefulWidget {
 }
 
 class _SkeletonCardState extends State<SkeletonCard> with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
+  late final AnimationController _blinkCtrl;
+  late final Animation<double> _blinkAnim;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _blinkCtrl = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2200),
-    )..repeat();
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+    _blinkAnim = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkCtrl, curve: Curves.easeInOut),
+    );
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _blinkCtrl.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) {
-        final wave = (1 - math.cos(_controller.value * math.pi * 2)) / 2;
-        final bgBase = widget.bg ?? AppTheme.surface;
-        final fill = Color.lerp(
-          bgBase,
-          AppTheme.surfaceContainerHigh,
-          0.18 + (wave * 0.06),
-        )!;
-        final borderColor = Color.lerp(
-          AppTheme.outlineVariant,
-          AppTheme.outline,
-          0.18,
-        )!;
-        final shadowColor = AppTheme.black.withValues(
-          alpha: 0.04 + (wave * 0.04),
-        );
-        return Container(
-          margin: widget.margin,
-          padding: widget.padding,
-          decoration: BoxDecoration(
-            color: fill,
-            border: Border.all(color: borderColor, width: 2),
-            borderRadius: BorderRadius.circular(10),
-            boxShadow: [
-              BoxShadow(
-                color: shadowColor,
-                offset: const Offset(0, 4),
-                blurRadius: 16,
-                spreadRadius: -4,
-              ),
-            ],
-          ),
-          child: widget.child,
-        );
-      },
+    return FadeTransition(
+      opacity: _blinkAnim,
+      child: Container(
+        margin: widget.margin,
+        padding: widget.padding,
+        decoration: BoxDecoration(
+          color: widget.bg ?? AppTheme.surface,
+          border: Border.all(color: AppTheme.surfaceContainerHigh, width: 2),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: widget.child,
+      ),
     );
   }
 }
@@ -173,7 +150,6 @@ class WorkoutSkeleton extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final pad = constraints.maxWidth < 360 ? 12.0 : 24.0;
-        final narrow = constraints.maxWidth < 360;
         return Padding(
           padding: EdgeInsets.fromLTRB(pad, 0, pad, 24),
           child: Column(
@@ -193,13 +169,13 @@ class WorkoutSkeleton extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              _BlockSkeleton(height: narrow ? 72 : 84),
+              const _BlockSkeleton(),
               const SizedBox(height: 12),
-              _BlockSkeleton(height: narrow ? 108 : 130),
+              const _BlockSkeleton(),
               const SizedBox(height: 24),
-              _BlockSkeleton(height: narrow ? 190 : 240),
+              const _BlockSkeleton(),
               const SizedBox(height: 24),
-              _BlockSkeleton(height: narrow ? 170 : 220),
+              const _BlockSkeleton(),
             ],
           ),
         );
@@ -223,27 +199,59 @@ class _StatSkeleton extends StatelessWidget {
   }
 }
 
-class _BlockSkeleton extends StatelessWidget {
-  final double height;
-  const _BlockSkeleton({required this.height});
+class _BlockSkeleton extends StatefulWidget {
+  const _BlockSkeleton();
+
+  @override
+  State<_BlockSkeleton> createState() => _BlockSkeletonState();
+}
+
+class _BlockSkeletonState extends State<_BlockSkeleton>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _blinkCtrl;
+  late final Animation<double> _blinkAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _blinkCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _blinkAnim = Tween<double>(begin: 0.3, end: 1.0).animate(
+      CurvedAnimation(parent: _blinkCtrl, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _blinkCtrl.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      decoration: neoBorder(bg: AppTheme.surface),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          SkeletonBox(width: 120, height: 16, radius: 8),
-          SizedBox(height: 12),
-          SkeletonBox(width: double.infinity, height: 12, radius: 8),
-          SizedBox(height: 8),
-          SkeletonBox(width: double.infinity, height: 12, radius: 8),
-          SizedBox(height: 8),
-          SkeletonBox(width: 180, height: 12, radius: 8),
-        ],
+    return FadeTransition(
+      opacity: _blinkAnim,
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.surface,
+          border: Border.all(color: AppTheme.surfaceContainerHigh, width: 2),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            SkeletonBox(width: 120, height: 16, radius: 8),
+            SizedBox(height: 12),
+            SkeletonBox(width: double.infinity, height: 12, radius: 8),
+            SizedBox(height: 8),
+            SkeletonBox(width: double.infinity, height: 12, radius: 8),
+            SizedBox(height: 8),
+            SkeletonBox(width: 180, height: 12, radius: 8),
+          ],
+        ),
       ),
     );
   }

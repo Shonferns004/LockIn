@@ -82,15 +82,22 @@ class _HomeScreenState extends State<HomeScreen> {
                   currentDateLabel: DateTime.now().toLocal(),
                 ),
                 Expanded(
-                  child: IndexedStack(
-                    index: currentTab,
-                    children: [
-                      WorkoutScreen(scrollController: _workoutCtrl),
-                      LookmaxScreen(scrollController: _lookmaxCtrl),
-                      StepsScreen(scrollController: _stepsCtrl),
-                      CoachScreen(scrollController: _coachCtrl),
-                      ProfileScreen(scrollController: _profileCtrl),
-                    ],
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 220),
+                    switchInCurve: Curves.easeOut,
+                    switchOutCurve: Curves.easeIn,
+                    transitionBuilder: (child, anim) =>
+                        FadeTransition(opacity: anim, child: child),
+                    child: KeyedSubtree(
+                      key: ValueKey(currentTab),
+                      child: [
+                        WorkoutScreen(scrollController: _workoutCtrl),
+                        LookmaxScreen(scrollController: _lookmaxCtrl),
+                        StepsScreen(scrollController: _stepsCtrl),
+                        CoachScreen(scrollController: _coachCtrl),
+                        ProfileScreen(scrollController: _profileCtrl),
+                      ][currentTab],
+                    ),
                   ),
                 ),
               ],

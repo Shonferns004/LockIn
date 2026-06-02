@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
+import '../widgets/animations.dart';
 
 class StatsBar extends StatelessWidget {
   const StatsBar({super.key});
@@ -16,10 +17,10 @@ class StatsBar extends StatelessWidget {
             builder: (context, constraints) {
               final isCompact = constraints.maxWidth < 360;
               final stats = [
-                _statItem(app.weeks.length.toString(), 'WEEKS', !isCompact),
-                _statItem(app.progress.streak.toString(), 'STREAK', !isCompact),
-                _statItem('${app.profile?.timePerSession ?? 20}MIN', 'SESSION', !isCompact),
-                _statItem('0', 'GEAR', !isCompact),
+                _countUpStat(app.weeks.length, 'WEEKS', !isCompact, ''),
+                _countUpStat(app.progress.streak, 'STREAK', !isCompact, ''),
+                _countUpStat(app.profile?.timePerSession ?? 20, 'SESSION', !isCompact, 'MIN'),
+                _countUpStat(0, 'GEAR', !isCompact, ''),
               ];
 
               if (isCompact) {
@@ -60,12 +61,26 @@ class StatsBar extends StatelessWidget {
     );
   }
 
-  Widget _statItem(String val, String label, bool isWide) {
+  Widget _countUpStat(int val, String label, bool isWide, String suffix) {
     return Column(
       children: [
-        Text(val, style: AppTheme.textTheme.headlineMedium?.copyWith(fontSize: isWide ? null : 14, color: AppTheme.primary)),
+        CountUp(
+          target: val,
+          duration: const Duration(milliseconds: 600),
+          builder: (v) => Text(
+            '$v$suffix',
+            style: AppTheme.textTheme.headlineMedium?.copyWith(
+              fontSize: isWide ? null : 14,
+              color: AppTheme.primary,
+            ),
+          ),
+        ),
         const SizedBox(height: 2),
-        Text(label, style: AppTheme.textTheme.labelMedium?.copyWith(fontSize: isWide ? null : 9, color: AppTheme.onSurfaceVariant, letterSpacing: 2)),
+        Text(label, style: AppTheme.textTheme.labelMedium?.copyWith(
+          fontSize: isWide ? null : 9,
+          color: AppTheme.onSurfaceVariant,
+          letterSpacing: 2,
+        )),
       ],
     );
   }

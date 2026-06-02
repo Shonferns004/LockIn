@@ -3,7 +3,9 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../services/auth_service.dart';
+
 import '../theme.dart';
+import '../widgets/animations.dart';
 
 class ProfileScreen extends StatelessWidget {
   final ScrollController? scrollController;
@@ -687,43 +689,81 @@ class _ProgressCard extends StatelessWidget {
   }
 }
 
-class _DangerZone extends StatelessWidget {
+class _DangerZone extends StatefulWidget {
   final AppProvider app;
   const _DangerZone({required this.app});
 
-  void _confirmReset(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: AppTheme.errorContainer,
+  @override
+  State<_DangerZone> createState() => _DangerZoneState();
+}
+
+class _DangerZoneState extends State<_DangerZone> {
+  bool _loggingOut = false;
+  bool _deleting = false;
+
+  void _confirmReset() {
+    showScaleAlert(context, (ctx) => AlertDialog(
+      backgroundColor: AppTheme.errorContainer,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(4),
+        side: const BorderSide(color: AppTheme.border, width: 4),
+      ),
+      title: const Text('Erase All Training Data?',
+          style: TextStyle(fontWeight: FontWeight.w800)),
+      content: const Text('This will delete all your data permanently.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(ctx),
+          child: const Text('Cancel'),
+        ),
+        NeoButton(
+          label: 'DELETE',
+          bg: AppTheme.error,
+          textColor: Colors.white,
+          onTap: () async {
+            Navigator.pop(ctx);
+            setState(() => _deleting = true);
+            await widget.app.resetProfile();
+            await AuthService().logout();
+            if (mounted) {
+              Navigator.of(context).pushReplacementNamed('login');
+            }
+          },
+        ),
+      ],
+    ));
+  }
+
+  Future<void> _logout() async {
+    final confirmed = await showScaleAlert<bool>(context, (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surface,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(4),
           side: const BorderSide(color: AppTheme.border, width: 4),
         ),
-        title: const Text('Erase All Training Data?',
+        title: const Text('Log Out?',
             style: TextStyle(fontWeight: FontWeight.w800)),
-        content: const Text('This will delete all your data permanently.'),
+        content: const Text('Are you sure you want to log out?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel'),
           ),
           NeoButton(
-            label: 'DELETE',
-            bg: AppTheme.error,
+            label: 'LOG OUT',
+            bg: AppTheme.secondary,
             textColor: Colors.white,
-            onTap: () async {
-              Navigator.pop(ctx);
-              await app.resetProfile();
-              await AuthService().logout();
-              if (context.mounted) {
-                Navigator.of(context).pushReplacementNamed('login');
-              }
-            },
+            onTap: () => Navigator.pop(ctx, true),
           ),
         ],
       ),
     );
+    if (confirmed != true) return;
+    setState(() => _loggingOut = true);
+    await AuthService().logout();
+    if (mounted) {
+      Navigator.of(context).pushReplacementNamed('login');
+    }
   }
 
   @override
@@ -748,25 +788,20 @@ class _DangerZone extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: NeoButton(
-                  label: 'Log Out',
+                  label: _loggingOut ? 'Logging Out...' : 'Log Out',
                   bg: AppTheme.secondary,
                   textColor: Colors.white,
-                  onTap: () async {
-                    await AuthService().logout();
-                    if (context.mounted) {
-                      Navigator.of(context).pushReplacementNamed('login');
-                    }
-                  },
+                  onTap: _loggingOut || _deleting ? null : _logout,
                 ),
               ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: NeoButton(
-                  label: 'Delete Account',
+                  label: _deleting ? 'Deleting...' : 'Delete Account',
                   bg: AppTheme.error,
                   textColor: Colors.white,
-                  onTap: () => _confirmReset(context),
+                  onTap: _loggingOut || _deleting ? null : _confirmReset,
                 ),
               ),
             ],

@@ -11,12 +11,16 @@ import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/signup_screen.dart';
+import 'services/fcm_service.dart';
 import 'services/notification_service.dart';
+import 'widgets/animations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: '.env');
+  await FcmService.init();
   await NotificationService.init();
+  await NotificationService.requestPermission();
 
   final api = ApiService();
   await api.init();
@@ -45,12 +49,23 @@ class LockInApp extends StatelessWidget {
         debugShowCheckedModeBanner: false,
         theme: AppTheme.lightTheme,
         initialRoute: 'splash',
-        routes: {
-          'splash': (_) => const SplashScreen(),
-          'login': (_) => const LoginScreen(),
-          'signup': (_) => const SignupScreen(),
-          'onboarding': (_) => const OnboardingScreen(),
-          'home': (_) => const HomeScreen(),
+        onGenerateRoute: (settings) {
+          switch (settings.name) {
+            case 'splash':
+              return fadeRoute(const SplashScreen());
+            case 'login':
+              return slideFadeRoute(const LoginScreen());
+            case 'signup':
+              return slideFadeRoute(const SignupScreen());
+            case 'onboarding':
+              return slideFadeRoute(const OnboardingScreen());
+            case 'home':
+              return fadeRoute(const HomeScreen());
+            default:
+              return MaterialPageRoute(
+                builder: (_) => const SplashScreen(),
+              );
+          }
         },
       ),
     );

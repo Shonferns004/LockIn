@@ -10,6 +10,7 @@ import '../models/week_plan.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
 import 'skeletons.dart';
+import 'animations.dart';
 
 class SessionPlayer extends StatefulWidget {
   const SessionPlayer({super.key});
@@ -116,6 +117,9 @@ class _SessionPlayerState extends State<SessionPlayer> {
                           const SizedBox(height: 16),
                           _GuidePanel(
                             future: _guideFuture,
+                            imageUrl: displayFaceMode
+                                ? null
+                                : app.currentExercise?.imageUrl,
                           ),
                           const SizedBox(height: 16),
                           if (displayFaceMode)
@@ -170,41 +174,38 @@ class _SessionPlayerState extends State<SessionPlayer> {
   void _closeSession(BuildContext context, AppProvider app) {
     if (app.session.phase.index > 0 &&
         app.session.phase != SessionPhase.complete) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: AppTheme.surfaceBright,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(4),
-            side: const BorderSide(color: AppTheme.border, width: 4),
-          ),
-          title: const Text('End workout?',
-              style: TextStyle(fontWeight: FontWeight.w800)),
-          content: const Text("Progress won't be saved."),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: Text('CANCEL', style: AppTheme.textTheme.labelMedium),
-            ),
-            NeoButton(
-              label: 'END',
-              bg: AppTheme.error,
-              textColor: Colors.white,
-              onTap: () async {
-                final dialogNavigator = Navigator.of(ctx);
-                final pageNavigator = Navigator.of(context);
-                _timer?.cancel();
-                _sounds.stopAll();
-                await _sounds.playExit();
-                if (!mounted) return;
-                app.closeSession();
-                dialogNavigator.pop();
-                pageNavigator.pop();
-              },
-            ),
-          ],
+      showScaleAlert(context, (ctx) => AlertDialog(
+        backgroundColor: AppTheme.surfaceBright,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(4),
+          side: const BorderSide(color: AppTheme.border, width: 4),
         ),
-      );
+        title: const Text('End workout?',
+            style: TextStyle(fontWeight: FontWeight.w800)),
+        content: const Text("Progress won't be saved."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text('CANCEL', style: AppTheme.textTheme.labelMedium),
+          ),
+          NeoButton(
+            label: 'END',
+            bg: AppTheme.error,
+            textColor: Colors.white,
+            onTap: () async {
+              final dialogNavigator = Navigator.of(ctx);
+              final pageNavigator = Navigator.of(context);
+              _timer?.cancel();
+              _sounds.stopAll();
+              await _sounds.playExit();
+              if (!mounted) return;
+              app.closeSession();
+              dialogNavigator.pop();
+              pageNavigator.pop();
+            },
+          ),
+        ],
+      ));
       return;
     }
 
@@ -684,9 +685,44 @@ class _MainCard extends StatelessWidget {
     );
   }
 
+  Widget _exerciseImage(Exercise ex) {
+    final url = ex.imageUrl;
+    if (url == null) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          url,
+          height: 180,
+          width: double.infinity,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+          loadingBuilder: (_, child, progress) {
+            if (progress == null) return child;
+            return Container(
+              height: 180,
+              decoration: BoxDecoration(
+                color: AppTheme.surfaceContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Center(
+                child: SizedBox(
+                  width: 24, height: 24,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
   Widget _idleBody(AppProvider app, Exercise ex, bool timed, int totalEx) {
     return Column(
       children: [
+        _exerciseImage(ex),
         Text(
           timed ? '0:${ex.repSeconds.toString().padLeft(2, '0')}' : '-',
           style: AppTheme.textTheme.displayMedium
@@ -718,6 +754,7 @@ class _MainCard extends StatelessWidget {
   Widget _activeBody(AppProvider app, Exercise ex, bool timed) {
     return Column(
       children: [
+        _exerciseImage(ex),
         Text(
           timed ? _formatTime(app.session.timeLeft) : ex.reps,
           style: AppTheme.textTheme.displayMedium
@@ -816,8 +853,9 @@ class _MainCard extends StatelessWidget {
 
 class _GuidePanel extends StatelessWidget {
   final Future<Map<String, String>>? future;
+  final String? imageUrl;
 
-  const _GuidePanel({required this.future});
+  const _GuidePanel({required this.future, this.imageUrl});
 
   @override
   Widget build(BuildContext context) {
@@ -838,6 +876,30 @@ class _GuidePanel extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              if (imageUrl != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      imageUrl!,
+                      height: 180,
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      loadingBuilder: (_, child, progress) {
+                        if (progress == null) return child;
+                        return Container(
+                          height: 180,
+                          decoration: BoxDecoration(
+                            color: AppTheme.surfaceContainer,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
               Text('AI COACH',
                   style: AppTheme.textTheme.labelLarge
                       ?.copyWith(color: AppTheme.primary, letterSpacing: 2)),

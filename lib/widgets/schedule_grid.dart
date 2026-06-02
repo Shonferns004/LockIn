@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
+import '../widgets/animations.dart';
 
 class ScheduleGrid extends StatelessWidget {
   const ScheduleGrid({super.key});
@@ -76,120 +77,126 @@ class ScheduleGrid extends StatelessWidget {
                     final isFuture = date.isAfter(todayOnly);
                     final isSkipped = skippedDates.contains(dateKey);
 
-                    return GestureDetector(
-                      onTap: () => app.selectDay(dayIdx),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 150),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 4, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: day.isRest
-                              ? AppTheme.surfaceContainerLow
-                              : isSkipped
-                                  ? AppTheme.errorContainer
-                                      .withValues(alpha: 0.18)
-                                  : completed
-                                      ? AppTheme.primaryContainer
-                                          .withValues(alpha: 0.18)
-                                      : AppTheme.surfaceBright,
-                          border: Border.all(
-                            color: isSelected
-                                ? AppTheme.primary
-                                : isToday
-                                    ? AppTheme.secondary
-                                    : isSkipped
-                                        ? AppTheme.error
-                                        : completed
-                                            ? AppTheme.primaryFixedDim
-                                            : AppTheme.border,
-                            width: isSelected ? 3 : 2,
-                          ),
-                          borderRadius: BorderRadius.circular(4),
-                          boxShadow: isSelected ? neoShadow() : null,
-                        ),
-                        transform: isSelected
-                            ? Matrix4.translationValues(-2, -2, 0)
-                            : Matrix4.identity(),
-                        child: Stack(
-                          children: [
-                            Center(
-                              child: FittedBox(
-                                fit: BoxFit.scaleDown,
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      DateFormat('EEE')
-                                          .format(date)
-                                          .toUpperCase(),
-                                      style: AppTheme.textTheme.labelSmall
-                                          ?.copyWith(
-                                        fontSize: isCompact ? 7 : 8,
-                                        color: day.isRest
-                                            ? AppTheme.outline
-                                            : isToday
-                                                ? AppTheme.secondary
-                                                : isSkipped
-                                                    ? AppTheme.error
-                                                    : (completed
-                                                        ? AppTheme.primary
-                                                        : AppTheme
-                                                            .onSurfaceVariant),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      DateFormat('d').format(date),
-                                      style: AppTheme.textTheme.headlineMedium
-                                          ?.copyWith(
-                                        fontSize: isCompact ? 13 : 15,
-                                        color: day.isRest
-                                            ? AppTheme.outline
-                                            : isToday
-                                                ? AppTheme.secondary
-                                                : isSkipped
-                                                    ? AppTheme.error
-                                                    : (completed
-                                                        ? AppTheme.primary
-                                                        : AppTheme
-                                                            .onBackground),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      day.title.length > 5
-                                          ? day.title.substring(0, 5)
-                                          : day.title,
-                                      style: AppTheme.textTheme.labelSmall
-                                          ?.copyWith(
-                                        fontSize: isCompact ? 7 : 8,
-                                        color: isFuture
-                                            ? AppTheme.outline
-                                            : isSkipped
-                                                ? AppTheme.error
-                                                : (completed
-                                                    ? AppTheme.primary
-                                                    : AppTheme
-                                                        .onSurfaceVariant),
-                                      ),
-                                      textAlign: TextAlign.center,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                  ],
-                                ),
-                              ),
+                    return StaggeredFadeSlide(
+                      index: i,
+                      delayPerItem: const Duration(milliseconds: 50),
+                      offset: const Offset(0, 10),
+                      child: GestureDetector(
+                        onTap: () => app.selectDay(dayIdx),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 4, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: day.isRest
+                                ? AppTheme.surfaceContainerLow
+                                : isSkipped
+                                    ? AppTheme.errorContainer
+                                        .withValues(alpha: 0.18)
+                                    : completed
+                                        ? AppTheme.primaryContainer
+                                            .withValues(alpha: 0.18)
+                                        : AppTheme.surfaceBright,
+                            border: Border.all(
+                              color: isSelected
+                                  ? AppTheme.primary
+                                  : isToday
+                                      ? AppTheme.secondary
+                                      : isSkipped
+                                          ? AppTheme.error
+                                          : completed
+                                              ? AppTheme.primaryFixedDim
+                                              : AppTheme.border,
+                              width: isSelected ? 3 : 2,
                             ),
-                            if (isSkipped)
-                              const Positioned(
-                                right: 4,
-                                top: 4,
-                                child: Icon(
-                                  Icons.close_rounded,
-                                  size: 12,
-                                  color: AppTheme.error,
+                            borderRadius: BorderRadius.circular(4),
+                            boxShadow: isSelected ? neoShadow() : null,
+                          ),
+                          transform: isSelected
+                              ? Matrix4.translationValues(-2, -2, 0)
+                              : Matrix4.identity(),
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: FittedBox(
+                                  fit: BoxFit.scaleDown,
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        DateFormat('EEE')
+                                            .format(date)
+                                            .toUpperCase(),
+                                        style: AppTheme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          fontSize: isCompact ? 7 : 8,
+                                          color: day.isRest
+                                              ? AppTheme.outline
+                                              : isToday
+                                                  ? AppTheme.secondary
+                                                  : isSkipped
+                                                      ? AppTheme.error
+                                                      : (completed
+                                                          ? AppTheme.primary
+                                                          : AppTheme
+                                                              .onSurfaceVariant),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        DateFormat('d').format(date),
+                                        style: AppTheme.textTheme
+                                            .headlineMedium
+                                            ?.copyWith(
+                                          fontSize: isCompact ? 13 : 15,
+                                          color: day.isRest
+                                              ? AppTheme.outline
+                                              : isToday
+                                                  ? AppTheme.secondary
+                                                  : isSkipped
+                                                      ? AppTheme.error
+                                                      : (completed
+                                                          ? AppTheme.primary
+                                                          : AppTheme
+                                                              .onBackground),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 1),
+                                      Text(
+                                        day.title.length > 5
+                                            ? day.title.substring(0, 5)
+                                            : day.title,
+                                        style: AppTheme.textTheme.labelSmall
+                                            ?.copyWith(
+                                          fontSize: isCompact ? 7 : 8,
+                                          color: isFuture
+                                              ? AppTheme.outline
+                                              : isSkipped
+                                                  ? AppTheme.error
+                                                  : (completed
+                                                      ? AppTheme.primary
+                                                      : AppTheme
+                                                          .onSurfaceVariant),
+                                        ),
+                                        textAlign: TextAlign.center,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                          ],
+                              if (isSkipped)
+                                const Positioned(
+                                  right: 4,
+                                  top: 4,
+                                  child: Icon(
+                                    Icons.close_rounded,
+                                    size: 12,
+                                    color: AppTheme.error,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     );

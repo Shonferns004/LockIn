@@ -19,7 +19,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   final _weightCtrl = TextEditingController(text: '70');
   final _ageCtrl = TextEditingController(text: '25');
   String _gender = 'male';
-  String _goal = 'build_muscle';
+  final Set<String> _goals = {'build_muscle'};
   String _experience = 'beginner';
   int _timePerSession = 20;
   final _healthCtrl = TextEditingController();
@@ -105,14 +105,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Goal
-                  Text('GOAL', style: AppTheme.textTheme.labelLarge),
+                  // Goal (multi-select)
+                  Text('GOAL (pick all that apply)', style: AppTheme.textTheme.labelLarge),
                   const SizedBox(height: 6),
-                  _wrapChoiceChips(
-                    ['build_muscle', 'lose_fat', 'get_toned', 'overall_fitness'],
-                    ['💪 BUILD MUSCLE', '🔥 LOSE FAT', '✨ GET TONED', '⚡ OVERALL FITNESS'],
-                    _goal,
-                    (v) => setState(() => _goal = v),
+                  _multiChoiceChips(
+                    ['build_muscle', 'lose_fat', 'lean_body', 'get_toned', 'overall_fitness', 'improve_posture'],
+                    ['💪 BUILD MUSCLE', '🔥 LOSE FAT', '🌱 LEAN BODY', '✨ GET TONED', '⚡ OVERALL FITNESS', '🧘 IMPROVE POSTURE'],
+                    _goals,
+                    (v) => setState(() {
+                      if (_goals.contains(v)) { _goals.remove(v); } else { _goals.add(v); }
+                    }),
                   ),
                   const SizedBox(height: 20),
 
@@ -265,6 +267,36 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  Widget _multiChoiceChips(List values, List<String> labels, Set<dynamic> selectedSet, Function(dynamic) onTap) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: List.generate(values.length, (i) {
+        final selected = selectedSet.contains(values[i]);
+        return GestureDetector(
+          onTap: () => onTap(values[i]),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 150),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: selected ? AppTheme.primary : AppTheme.surfaceBright,
+              border: Border.all(color: selected ? AppTheme.primary : AppTheme.border, width: 3),
+              boxShadow: selected ? neoShadowSm() : null,
+            ),
+            transform: selected ? Matrix4.translationValues(-2, -2, 0) : Matrix4.identity(),
+            child: Text(
+              labels[i],
+              style: AppTheme.textTheme.labelMedium?.copyWith(
+                fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                color: selected ? AppTheme.onPrimary : AppTheme.onBackground,
+              ),
+            ),
+          ),
+        );
+      }),
+    );
+  }
+
   Future<void> _submit() async {
     final h = int.tryParse(_heightCtrl.text) ?? 170;
     final w = int.tryParse(_weightCtrl.text) ?? 70;
@@ -277,7 +309,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       weight: w,
       age: a,
       gender: _gender,
-      goal: _goal,
+      goals: _goals.toList(),
       experience: _experience,
       timePerSession: _timePerSession,
       health: _healthCtrl.text.trim(),

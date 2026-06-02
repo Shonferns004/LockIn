@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
 import '../theme.dart';
 import '../widgets/skeletons.dart';
+import '../widgets/animations.dart';
 
 class CoachScreen extends StatefulWidget {
   final ScrollController? scrollController;
@@ -73,37 +74,44 @@ class _CoachScreenState extends State<CoachScreen> {
                             ),
                           )
                         else
-                          ...app.coachHistory.map((msg) {
+                          ...app.coachHistory.toList().asMap().entries.map((entry) {
+                            final i = entry.key;
+                            final msg = entry.value;
                             final isUser = msg['role'] == 'user';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: Row(
-                                mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if (!isUser) const Padding(
-                                    padding: EdgeInsets.only(right: 8, top: 6),
-                                    child: Icon(Icons.smart_toy, size: 18, color: AppTheme.secondary),
-                                  ),
-                                  Flexible(
-                                    child: Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: isUser ? AppTheme.primaryContainer.withValues(alpha: 0.3) : AppTheme.surfaceBright,
-                                        border: Border.all(color: isUser ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.border, width: 2),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: Text(
-                                        msg['content'] ?? '',
-                                        style: AppTheme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                            return StaggeredFadeSlide(
+                              index: i,
+                              delayPerItem: const Duration(milliseconds: 60),
+                              offset: const Offset(0, 15),
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: Row(
+                                  mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (!isUser) const Padding(
+                                      padding: EdgeInsets.only(right: 8, top: 6),
+                                      child: Icon(Icons.smart_toy, size: 18, color: AppTheme.secondary),
+                                    ),
+                                    Flexible(
+                                      child: Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isUser ? AppTheme.primaryContainer.withValues(alpha: 0.3) : AppTheme.surfaceBright,
+                                          border: Border.all(color: isUser ? AppTheme.primary.withValues(alpha: 0.3) : AppTheme.border, width: 2),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(
+                                          msg['content'] ?? '',
+                                          style: AppTheme.textTheme.bodyMedium?.copyWith(height: 1.5),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  if (isUser) const Padding(
-                                    padding: EdgeInsets.only(left: 8, top: 6),
-                                    child: Icon(Icons.person, size: 18, color: AppTheme.primary),
-                                  ),
-                                ],
+                                    if (isUser) const Padding(
+                                      padding: EdgeInsets.only(left: 8, top: 6),
+                                      child: Icon(Icons.person, size: 18, color: AppTheme.primary),
+                                    ),
+                                  ],
+                                ),
                               ),
                             );
                           }),
@@ -178,7 +186,14 @@ class _CoachScreenState extends State<CoachScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label, style: AppTheme.textTheme.labelMedium?.copyWith(color: AppTheme.onSurfaceVariant)),
-          Text(val, style: AppTheme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold)),
+          Flexible(
+            child: Text(
+              val,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              style: AppTheme.textTheme.labelMedium?.copyWith(fontWeight: FontWeight.bold),
+            ),
+          ),
         ],
       ),
     );

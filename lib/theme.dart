@@ -159,7 +159,7 @@ List<BoxShadow> neoActiveShadow() => const [
 
 // ── Neo-Brutalist Card ──
 
-class NeoCard extends StatelessWidget {
+class NeoCard extends StatefulWidget {
   final Widget child;
   final Color? bg;
   final EdgeInsetsGeometry? padding;
@@ -182,27 +182,72 @@ class NeoCard extends StatelessWidget {
   });
 
   @override
+  State<NeoCard> createState() => _NeoCardState();
+}
+
+class _NeoCardState extends State<NeoCard>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _scaleCtrl;
+  late final Animation<double> _scaleAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _scaleCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 120),
+      upperBound: 1.0,
+      lowerBound: 0.96,
+    );
+    _scaleAnim = CurvedAnimation(
+      parent: _scaleCtrl,
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  @override
+  void dispose() {
+    _scaleCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onTapDown(_) => _scaleCtrl.forward();
+  void _onTapUp(_) => _scaleCtrl.reverse();
+  void _onTapCancel() => _scaleCtrl.reverse();
+
+  @override
   Widget build(BuildContext context) {
     final card = AnimatedContainer(
       duration: const Duration(milliseconds: 150),
-      width: width,
-      height: height,
-      margin: margin,
-      padding: padding ?? const EdgeInsets.all(16),
+      width: widget.width,
+      height: widget.height,
+      margin: widget.margin,
+      padding: widget.padding ?? const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: bg ?? AppTheme.surface,
-        border: Border.all(color: borderColor ?? AppTheme.border, width: 4),
+        color: widget.bg ?? AppTheme.surface,
+        border: Border.all(
+            color: widget.borderColor ?? AppTheme.border, width: 4),
         borderRadius: BorderRadius.circular(4),
         boxShadow: neoShadow(),
       ),
-      child: child,
+      child: widget.child,
     );
 
-    if (onTap == null) return card;
+    if (widget.onTap == null) return card;
 
     return GestureDetector(
-      onTap: onTap,
-      child: card,
+      onTap: widget.onTap,
+      onTapDown: _onTapDown,
+      onTapUp: _onTapUp,
+      onTapCancel: _onTapCancel,
+      child: AnimatedBuilder(
+        animation: _scaleAnim,
+        builder: (_, child) => Transform.scale(
+          scale: _scaleAnim.value,
+          child: child,
+        ),
+        child: card,
+      ),
     );
   }
 }
