@@ -315,17 +315,10 @@ class _SettingsCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 12),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryContainer,
-                  border: Border.all(color: AppTheme.border, width: 2),
-                ),
-                child: Text(
-                  'AUTO',
-                  style: AppTheme.textTheme.labelMedium?.copyWith(color: AppTheme.onPrimaryContainer),
-                ),
+              Switch(
+                value: app.waterReminderEnabled,
+                onChanged: (v) => app.toggleWaterReminder(v),
+                activeColor: AppTheme.primary,
               ),
             ],
           ),
