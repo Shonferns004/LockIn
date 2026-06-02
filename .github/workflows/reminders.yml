@@ -1,0 +1,19 @@
+name: Reminders
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+    - cron: '0 8 * * *'
+
+jobs:
+  water:
+    if: github.event.schedule == '0 */2 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s https://lock-in-server.vercel.app/api/cron/water-reminder
+
+  workout:
+    if: github.event.schedule == '0 8 * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -s https://lock-in-server.vercel.app/api/cron/workout-reminder
